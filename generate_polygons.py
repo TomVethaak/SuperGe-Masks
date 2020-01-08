@@ -26,6 +26,8 @@ Margin          = 50                            # Spill of mask 2 around the mes
 
 # Contact pads in a 3x3 grid
 PadWidth        = 200000
+Litho1Fraction  = 0.04                          # Hi-res litho step: until what fraction of distance to pads
+Litho2Fraction  = 0.02                          # Lo-res litho step: from what fraction of distance to pads
 PadPositions    = [[[-300000,WArm],[-300000,-WArm]],                            # Left
                    [[-300000-WArm,-300000+WArm],[-300000+WArm,-300000-WArm]],   # Bottom left
                    [[-WArm,-300000],[WArm,-300000]],                            # Bottom.. etc
@@ -37,21 +39,40 @@ PadPositions    = [[[-300000,WArm],[-300000,-WArm]],                            
 ContactPadList  = [[-300000,0],[-300000,-300000],[0,-300000],[300000,-300000],[300000,0],[300000,300000],[0,300000],[-300000,300000]]
 
 #%% Function definitions
-def StepsToPosition(_StartingPoint,_StepList):
-    StepArray   = np.array(_StepList)
-    return [_StartingPoint[0]+sum(StepArray[:,0]),_StartingPoint[1]+sum(StepArray[:,1])]
+# Single point operations
+def IntermediatePoint(_PointA,_PointB,_Fraction):
+    return PosSum(_PointA,PosDiffFraction(_PointA,_PointB,_Fraction))
 
 def PosDiff(_PointA,_PointB):
     return [_PointB[0]-_PointA[0],_PointB[1]-_PointA[1]]
 
+def PosDiffFraction(_PointA,_PointB,_Fraction):
+    return [x*_Fraction for x in PosDiff(_PointA,_PointB)]
+
 def PosSum(_PointA,_PointB):
     return [_PointB[0]+_PointA[0],_PointB[1]+_PointA[1]]
 
+# List operations
 def PositionsToSteps(_PositionList):
     _StepList       = []
     for PositionIterator in range(1,len(_PositionList),1):
         _StepList   += [PosDiff(_PositionList[PositionIterator-1],_PositionList[PositionIterator])]
     return _StepList
+    
+def StepsToPosition(_StartingPoint,_StepList):
+    StepArray   = np.array(_StepList)
+    return [_StartingPoint[0]+sum(StepArray[:,0]),_StartingPoint[1]+sum(StepArray[:,1])]
+
+# Path macros
+def PathToPadFirstFractionSteps(_StartingPoint,_PadPoint1,_PadPoint2,_EndPoint,_Fraction):
+    _Point1     = IntermediatePoint(_StartingPoint,_PadPoint1,_Fraction)
+    _Point2     = IntermediatePoint(_EndPoint,_PadPoint2,_Fraction)
+    return PositionsToSteps([StartOfTrace,_Point1,_Point2,_EndPoint])
+
+def PathToPadSecondFractionSteps(_StartingPoint,_PadPoint1,_PadPoint2,_EndPoint,_Fraction):
+    _Point1     = IntermediatePoint(_StartingPoint,_PadPoint1,_Fraction)
+    _Point2     = IntermediatePoint(_EndPoint,_PadPoint2,_Fraction)
+    return PositionsToSteps([_StartingPoint,_Point1,_PadPoint1,_PadPoint2,_Point2,_Point1,_StartingPoint])
 
 #%% Mask 1: Si/Ge/Al, etch down Al and Ge. DEVICES
 PolygonFileName = 'Polygon_%d%02d%02d_%02dh%02d_%s_Mask1.txt' % (now.year, now.month, now.day, now.hour, now.minute, DeviceType)
@@ -63,25 +84,21 @@ for MesaIterator in range(0,len(WMesaList),1):
     for ContactIterator in range(0,len(LContactList),1):
         TotalLength     = 2*LEnd+8*LContactList[ContactIterator]+sum(LChannelList)
         DeviceCenter    = [ContactIterator*ContactSpacing[0]+MesaIterator*MesaSpacing[0],ContactIterator*ContactSpacing[1]+MesaIterator*MesaSpacing[1]]
-        StartingPoint   = [ContactIterator*ContactSpacing[0]+MesaIterator*MesaSpacing[0]-TotalLength/2,ContactIterator*ContactSpacing[1]+MesaIterator*MesaSpacing[1]+WMesaList[MesaIterator]/2]
+        ReferencePoint  = [ContactIterator*ContactSpacing[0]+MesaIterator*MesaSpacing[0]-TotalLength/2,ContactIterator*ContactSpacing[1]+MesaIterator*MesaSpacing[1]+WMesaList[MesaIterator]/2]
 
         # Edge that sticks out on the left
         StepList        = [[0,-WMesaList[MesaIterator]],
                             [LEnd,0],
                             [0,-LArm]]
-        StartOfTrace    = StepsToPosition(StartingPoint,StepList)
 
         # Calculation of e-beam part of trace to the pads
+        StartOfTrace    = StepsToPosition(ReferencePoint,StepList)
         PadPosition1    = PosSum(DeviceCenter,PadPositions[0][0])
         PadPosition2    = PosSum(DeviceCenter,PadPositions[0][1])
         EndOfTrace      = [StartOfTrace[0]+LContactList[ContactIterator],StartOfTrace[1]-LContactList[ContactIterator]]
-        Trace1          = PosSum(StartOfTrace,[x*0.04 for x in PosDiff(StartOfTrace,PadPosition1)])
-        Trace2          = PosSum(EndOfTrace,[x*0.04 for x in PosDiff(EndOfTrace,PadPosition2)])
-        Trace3          = PosSum(StartOfTrace,[x*0.02 for x in PosDiff(StartOfTrace,PadPosition1)])
-        Trace4          = PosSum(EndOfTrace,[x*0.02 for x in PosDiff(EndOfTrace,PadPosition2)])
-        ArmContactList[MesaIterator][ContactIterator][0]=[Trace3,Trace4]
+        ArmContactList[MesaIterator][ContactIterator][0]=[StartOfTrace,EndOfTrace]
 
-        StepList        += [PosDiff(StartOfTrace,Trace1),PosDiff(Trace1,Trace2),PosDiff(Trace2,EndOfTrace)]
+        StepList        += PathToPadFirstFractionSteps(StartOfTrace,PadPosition1,PadPosition2,EndOfTrace,Litho1Fraction)
         StepList        += [[0,LArm+LContactList[ContactIterator]]]
 
         # Arms below
@@ -92,19 +109,15 @@ for MesaIterator in range(0,len(WMesaList),1):
             if ChannelIterator<len(LChannelList)-2:
                 StepList.append([LChannelList[ChannelIterator+1],0])
                 StepList    += [[0,-(1+(ChannelIterator==0 or ChannelIterator==2))*LArm]] # Long arms in the middle
-                StartOfTrace= StepsToPosition(StartingPoint,StepList)
 
                 # Calculation of e-beam part of trace to the pads
+                StartOfTrace= StepsToPosition(ReferencePoint,StepList)
                 PadPosition1= PosSum(DeviceCenter,PadPositions[1+ChannelIterator/2][0])
                 PadPosition2= PosSum(DeviceCenter,PadPositions[1+ChannelIterator/2][1])
                 EndOfTrace  = [StartOfTrace[0]+LContactList[ContactIterator],StartOfTrace[1]-(1-ChannelIterator/2)*LContactList[ContactIterator]]
-                Trace1      = PosSum(StartOfTrace,[x*0.04 for x in PosDiff(StartOfTrace,PadPosition1)])
-                Trace2      = PosSum(EndOfTrace,[x*0.04 for x in PosDiff(EndOfTrace,PadPosition2)])
-                Trace3      = PosSum(StartOfTrace,[x*0.02 for x in PosDiff(StartOfTrace,PadPosition1)])
-                Trace4      = PosSum(EndOfTrace,[x*0.02 for x in PosDiff(EndOfTrace,PadPosition2)])
-                ArmContactList[MesaIterator][ContactIterator][1+ChannelIterator/2]=[Trace3,Trace4]
-
-                StepList    += [PosDiff(StartOfTrace,Trace1),PosDiff(Trace1,Trace2),PosDiff(Trace2,EndOfTrace)]
+                ArmContactList[MesaIterator][ContactIterator][1+ChannelIterator/2]=[StartOfTrace,EndOfTrace]
+        
+                StepList        += PathToPadFirstFractionSteps(StartOfTrace,PadPosition1,PadPosition2,EndOfTrace,Litho1Fraction)
                 StepList    += [[0,(1+(ChannelIterator==0 or ChannelIterator==2))*LArm+(1-ChannelIterator/2)*LContactList[ContactIterator]]]  # Long arms in the middle
 
         # Edge that sticks out on the right
@@ -117,19 +130,15 @@ for MesaIterator in range(0,len(WMesaList),1):
         # Arms above
         for ChannelIterator in range(len(LChannelList)-len(LChannelList)%2,-1,-2):
             StepList        += [[0,(1+(ChannelIterator==2 or ChannelIterator==4))*LArm]]    # Long arms in the middle
-            StartOfTrace    = StepsToPosition(StartingPoint,StepList)
 
             # Calculation of e-beam part of trace to the pads
+            StartOfTrace    = StepsToPosition(ReferencePoint,StepList)
             PadPosition1    = PosSum(DeviceCenter,PadPositions[7-ChannelIterator/2][0])
             PadPosition2    = PosSum(DeviceCenter,PadPositions[7-ChannelIterator/2][1])
             EndOfTrace      = [StartOfTrace[0]-LContactList[ContactIterator],StartOfTrace[1]+(ChannelIterator/2-1-(ChannelIterator==6))*LContactList[ContactIterator]]
-            Trace1          = PosSum(StartOfTrace,[x*0.04 for x in PosDiff(StartOfTrace,PadPosition1)])
-            Trace2          = PosSum(EndOfTrace,[x*0.04 for x in PosDiff(EndOfTrace,PadPosition2)])
-            Trace3          = PosSum(StartOfTrace,[x*0.02 for x in PosDiff(StartOfTrace,PadPosition1)])
-            Trace4          = PosSum(EndOfTrace,[x*0.02 for x in PosDiff(EndOfTrace,PadPosition2)])
-            ArmContactList[MesaIterator][ContactIterator][7-ChannelIterator/2]=[Trace3,Trace4]
-
-            StepList        += [PosDiff(StartOfTrace,Trace1),PosDiff(Trace1,Trace2),PosDiff(Trace2,EndOfTrace)]
+            ArmContactList[MesaIterator][ContactIterator][7-ChannelIterator/2]=[StartOfTrace,EndOfTrace]
+    
+            StepList        += PathToPadFirstFractionSteps(StartOfTrace,PadPosition1,PadPosition2,EndOfTrace,Litho1Fraction)
             StepList        += [[0,-(1+(ChannelIterator==2 or ChannelIterator==4))*LArm-(ChannelIterator/2-1-(ChannelIterator==6))*LContactList[ContactIterator]],
                                  [-LChannelList[ChannelIterator],0],
                                  [-LContactList[ContactIterator],0]]
@@ -138,7 +147,7 @@ for MesaIterator in range(0,len(WMesaList),1):
         StepList.append([-LEnd,0])
 
         # Convert list of steps to list of points and write them to the file
-        PointList       = [StartingPoint]
+        PointList       = [ReferencePoint]
         for Step in StepList:
             PointList.append([PointList[len(PointList)-1][0]+Step[0],PointList[len(PointList)-1][1]+Step[1]])
         for Point in PointList:
@@ -148,8 +157,8 @@ for MesaIterator in range(0,len(WMesaList),1):
 
     # Go back to the start of the row
     TotalLength         = 2*LEnd+8*LContactList[0]+sum(LChannelList)
-    StartingPoint       = [-TotalLength/2,ContactIterator*ContactSpacing[1]+MesaIterator*MesaSpacing[1]+WMesaList[MesaIterator]/2]
-    File.write("%d	%d\n" % (StartingPoint[0],StartingPoint[1]))
+    ReferencePoint      = [-TotalLength/2,ContactIterator*ContactSpacing[1]+MesaIterator*MesaSpacing[1]+WMesaList[MesaIterator]/2]
+    File.write("%d	%d\n" % (ReferencePoint[0],ReferencePoint[1]))
     PointCounter+=1
     File.write("\n")
 File.close()
@@ -165,29 +174,30 @@ for MesaIterator in range(0,len(WMesaList),1):
     for ContactIterator in range(0,len(LContactList),1):
         TotalLength     = 2*LEnd+8*LContactList[ContactIterator]+sum(LChannelList)
         DeviceCenter    = [ContactIterator*ContactSpacing[0]+MesaIterator*MesaSpacing[0],ContactIterator*ContactSpacing[1]+MesaIterator*MesaSpacing[1]]
-        StartingPoint   = [ContactIterator*ContactSpacing[0]+MesaIterator*MesaSpacing[0]-TotalLength/2,ContactIterator*ContactSpacing[1]+MesaIterator*MesaSpacing[1]+WMesaList[MesaIterator]/2]
+        ReferencePoint  = [ContactIterator*ContactSpacing[0]+MesaIterator*MesaSpacing[0]-TotalLength/2,ContactIterator*ContactSpacing[1]+MesaIterator*MesaSpacing[1]+WMesaList[MesaIterator]/2]
         StepList        = []
 
         # Contact pads
         for PadCenter in ContactPadList:
-            StepList    += PositionsToSteps([StartingPoint,
+            StepList    += PositionsToSteps([ReferencePoint,
                                 PosSum(PosSum(DeviceCenter,PadCenter),[PadWidth/2,PadWidth/2]),
                                 PosSum(PosSum(DeviceCenter,PadCenter),[-PadWidth/2,PadWidth/2]),
                                 PosSum(PosSum(DeviceCenter,PadCenter),[-PadWidth/2,-PadWidth/2]),
                                 PosSum(PosSum(DeviceCenter,PadCenter),[PadWidth/2,-PadWidth/2]),
                                 PosSum(PosSum(DeviceCenter,PadCenter),[PadWidth/2,PadWidth/2]),
-                                StartingPoint])
+                                ReferencePoint])
         for PadIterator in range(0,len(LChannelList)+1,1):
-            StepList    += PositionsToSteps([StartingPoint,
-                                ArmContactList[MesaIterator][ContactIterator][PadIterator][0],
-                                PosSum(DeviceCenter,PadPositions[PadIterator][0]),
-                                PosSum(DeviceCenter,PadPositions[PadIterator][1]),
-                                ArmContactList[MesaIterator][ContactIterator][PadIterator][1],
-                                ArmContactList[MesaIterator][ContactIterator][PadIterator][0],
-                                StartingPoint])
+            StartOfTrace= ArmContactList[MesaIterator][ContactIterator][PadIterator][0]
+            EndOfTrace  = ArmContactList[MesaIterator][ContactIterator][PadIterator][1]
+            PadPoint1   = PosSum(DeviceCenter,PadPositions[PadIterator][0])
+            PadPoint2   = PosSum(DeviceCenter,PadPositions[PadIterator][1])
+            
+            StepList    += PositionsToSteps([ReferencePoint,StartOfTrace])
+            StepList    += PathToPadSecondFractionSteps(StartOfTrace,PadPoint1,PadPoint2,EndOfTrace,Litho2Fraction)
+            StepList    += PositionsToSteps([StartOfTrace,ReferencePoint])
 
         # Convert list of steps to list of points and write them to the file
-        PointList       = [StartingPoint]
+        PointList       = [ReferencePoint]
         for Step in StepList:
             PointList.append([PointList[len(PointList)-1][0]+Step[0],PointList[len(PointList)-1][1]+Step[1]])
         for Point in PointList:
@@ -197,8 +207,8 @@ for MesaIterator in range(0,len(WMesaList),1):
 
     # Go back to the start of the row
     TotalLength         = 2*LEnd+8*LContactList[0]+sum(LChannelList)
-    StartingPoint       = [-TotalLength/2,ContactIterator*ContactSpacing[1]+MesaIterator*MesaSpacing[1]+WMesaList[MesaIterator]/2]
-    File.write("%d	%d\n" % (StartingPoint[0],StartingPoint[1]))
+    ReferencePoint      = [-TotalLength/2,ContactIterator*ContactSpacing[1]+MesaIterator*MesaSpacing[1]+WMesaList[MesaIterator]/2]
+    File.write("%d	%d\n" % (ReferencePoint[0],ReferencePoint[1]))
     PointCounter+=1
     File.write("\n")
 File.close()
@@ -213,7 +223,7 @@ for MesaIterator in range(0,len(WMesaList),1):
     for ContactIterator in range(0,len(LContactList),1):
         TotalLength     = 2*LEnd+2*Margin+8*LContactList[ContactIterator]+sum(LChannelList)
         DeviceCenter    = [ContactIterator*ContactSpacing[0]+MesaIterator*MesaSpacing[0],ContactIterator*ContactSpacing[1]+MesaIterator*MesaSpacing[1]]
-        StartingPoint   = [ContactIterator*ContactSpacing[0]+MesaIterator*MesaSpacing[0]-TotalLength/2,ContactIterator*ContactSpacing[1]+MesaIterator*MesaSpacing[1]+WMesaList[MesaIterator]/2+Margin]
+        ReferencePoint  = [ContactIterator*ContactSpacing[0]+MesaIterator*MesaSpacing[0]-TotalLength/2,ContactIterator*ContactSpacing[1]+MesaIterator*MesaSpacing[1]+WMesaList[MesaIterator]/2+Margin]
 
         # Edge that sticks out on the left
         StepList        = [[0,-WMesaList[MesaIterator]-2*Margin],
@@ -238,7 +248,7 @@ for MesaIterator in range(0,len(WMesaList),1):
                             [LEnd+Margin-TotalLength,0]]
 
         # Convert list of steps to list of points and write them to the file
-        PointList       = [StartingPoint]
+        PointList       = [ReferencePoint]
         for Step in StepList:
             PointList.append([PointList[len(PointList)-1][0]+Step[0],PointList[len(PointList)-1][1]+Step[1]])
         for Point in PointList:
@@ -248,8 +258,8 @@ for MesaIterator in range(0,len(WMesaList),1):
 
     # Go back to the start of the row
     TotalLength     = 2*LEnd+2*Margin+8*LContactList[0]+sum(LChannelList)
-    StartingPoint   = [-TotalLength/2,ContactIterator*ContactSpacing[1]+MesaIterator*MesaSpacing[1]+WMesaList[MesaIterator]/2+Margin]
-    File.write("%d	%d\n" % (StartingPoint[0],StartingPoint[1]))
+    ReferencePoint  = [-TotalLength/2,ContactIterator*ContactSpacing[1]+MesaIterator*MesaSpacing[1]+WMesaList[MesaIterator]/2+Margin]
+    File.write("%d	%d\n" % (ReferencePoint[0],ReferencePoint[1]))
     PointCounter+=1
     File.write("\n")
 File.close()
