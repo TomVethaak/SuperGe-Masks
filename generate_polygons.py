@@ -37,7 +37,7 @@ PadPositions    = [[[-300000,WArm],[-300000,-WArm]],                            
 ContactPadList  = [[-300000,0],[-300000,-300000],[0,-300000],[300000,-300000],[300000,0],[300000,300000],[0,300000],[-300000,300000]]
 
 #%% Function definitions
-def CurrentPosition(_StartingPoint,_StepList):
+def StepsToPosition(_StartingPoint,_StepList):
     StepArray   = np.array(_StepList)
     return [_StartingPoint[0]+sum(StepArray[:,0]),_StartingPoint[1]+sum(StepArray[:,1])]
 
@@ -69,7 +69,7 @@ for MesaIterator in range(0,len(WMesaList),1):
         StepList        = [[0,-WMesaList[MesaIterator]],
                             [LEnd,0],
                             [0,-LArm]]
-        StartOfTrace    = CurrentPosition(StartingPoint,StepList)
+        StartOfTrace    = StepsToPosition(StartingPoint,StepList)
         
         # Calculation of e-beam part of trace to the pads
         PadPosition1    = PosSum(DeviceCenter,PadPositions[0][0])
@@ -92,7 +92,7 @@ for MesaIterator in range(0,len(WMesaList),1):
             if ChannelIterator<len(LChannelList)-2:
                 StepList.append([LChannelList[ChannelIterator+1],0])
                 StepList    += [[0,-(1+(ChannelIterator==0 or ChannelIterator==2))*LArm]] # Long arms in the middle
-                StartOfTrace= CurrentPosition(StartingPoint,StepList)
+                StartOfTrace= StepsToPosition(StartingPoint,StepList)
                 
                 # Calculation of e-beam part of trace to the pads
                 PadPosition1= PosSum(DeviceCenter,PadPositions[1+ChannelIterator/2][0])
@@ -117,7 +117,7 @@ for MesaIterator in range(0,len(WMesaList),1):
         # Arms above
         for ChannelIterator in range(len(LChannelList)-len(LChannelList)%2,-1,-2):
             StepList        += [[0,(1+(ChannelIterator==2 or ChannelIterator==4))*LArm]]    # Long arms in the middle
-            StartOfTrace    = CurrentPosition(StartingPoint,StepList)
+            StartOfTrace    = StepsToPosition(StartingPoint,StepList)
             
             # Calculation of e-beam part of trace to the pads
             PadPosition1    = PosSum(DeviceCenter,PadPositions[7-ChannelIterator/2][0])
