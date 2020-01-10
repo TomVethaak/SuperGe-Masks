@@ -16,6 +16,10 @@ DeviceType      = 'TLM_hall_bar' # 'TLM' = Transmission Line Measurement
 # Chip dimensions
 ChipWidth               = 6000000
 ChipLength              = 8000000
+HorizontalCells         = 6
+HorizontalCellSpacing   = 1000000
+VerticalCells           = 4
+VerticalCellSpacing     = -1000000
 
 # Alignment marks
 GlobalCrossThickness    = 10000
@@ -55,11 +59,11 @@ PadPositions    = [[[-300000,WArm],[-300000,-WArm]],                            
 ContactPadList  = [[-300000,0],[-300000,-300000],[0,-300000],[300000,-300000],[300000,0],[300000,300000],[0,300000],[-300000,300000]]
 
 # TLM dimensions
-TLMBottomLeft   = [-2500000,500000]
+TLMTopLeft      = [-2500000,3500000]
 WMesaList       = [1000,2000,5000,10000]        # All lengths in nanometers
-MesaSpacing     = [0,1000000]                   # Spacing between devices when iterating through the WMesaList
+MesaSpacing     = [0,VerticalCellSpacing]       # Spacing between devices when iterating through the WMesaList
 LContactList    = [50,100,200,500]              # 4 contact lengths per chip
-ContactSpacing  = [1000000,0]                   # Spacing between devices when iterating through the LContactList
+ContactSpacing  = [HorizontalCellSpacing,0]     # Spacing between devices when iterating through the LContactList
 LChannelList    = [50,100,150,200,500,1000,2000]# 8 contacts on one TLM bar, 7 steps
 LEnd            = 1000                          # Length that edges of Si/Ge stick out left and right
 LArm            = 750                           # Vertical length that arms stick out before bending to contacts
@@ -67,7 +71,7 @@ WArm            = 50000                         # Width of arm at the contact
 Margin          = 100                           # Spill of mask 2 around the mesa
 
 # Hall bars
-HallBottomLeft  = [1500000,500000]
+HallTopLeft     = [1500000,3500000]
 HallMesaSpacing = MesaSpacing
 HallLayerSpacing= ContactSpacing
 HallArmSpacing  = 50000
@@ -160,13 +164,14 @@ PolygonFileName = 'Polygon_%d%02d%02d_%02dh%02d_%s_Mask2.txt' % (now.year, now.m
 File            = open(PolygonFileName,"w+")
 PointCounter    = 0
 
-# --- TLM --- #
 # Empty  list of points to contact the pads to (ends of the arms sticking out bottom and top)
-ArmContactList  = [[[[[0,0],[0,0]] for ChannelIterator in range(0,len(LChannelList)+1,1)] for ContactIterator in range(0,len(LContactList),1)] for MesaIterator in range(0,len(WMesaList),1)]
-for MesaIterator in range(0,len(WMesaList),1):
-    for ContactIterator in range(0,len(LContactList),1):
+ArmContactList  = [[[[[0,0],[0,0]] for ArmIterator in range(0,8)] for HIterator in range(0,HorizontalCells)] for VIterator in range(0,VerticalCells)]
+
+# --- TLM --- #
+for MesaIterator in range(0,len(WMesaList)):
+    for ContactIterator in range(0,len(LContactList)):
         TotalLength     = 2*LEnd+8*LContactList[ContactIterator]+sum(LChannelList)
-        DeviceCenter    = PosListSum([TLMBottomLeft,StepFactor(ContactSpacing,ContactIterator),StepFactor(MesaSpacing,MesaIterator)])
+        DeviceCenter    = PosListSum([TLMTopLeft,StepFactor(ContactSpacing,ContactIterator),StepFactor(MesaSpacing,MesaIterator)])
         ReferencePoint  = PosSum(DeviceCenter,[-TotalLength/2,WMesaList[MesaIterator]/2])
 
         # Edge that sticks out on the left
@@ -236,24 +241,23 @@ for MesaIterator in range(0,len(WMesaList),1):
 
 # --- Hall bars --- #
 # Empty  list of points to contact the pads to (ends of the arms sticking out bottom and top)
-HallArmContactList  = [[[[[0,0],[0,0]] for ArmIterator in range(0,8,1)] for LayerIterator in range(0,2,1)] for MesaIterator in range(0,len(HallWMesaList),1)]
-for MesaIterator in range(0,len(HallWMesaList),1):
+for MesaIterator in range(0,len(HallWMesaList)):
     for LayerIterator in range(0,2,1):
         TotalLength     = HallLMesa
-        DeviceCenter    = PosListSum([HallBottomLeft,StepFactor(HallLayerSpacing,LayerIterator),StepFactor(HallMesaSpacing,MesaIterator)])
+        DeviceCenter    = PosListSum([HallTopLeft,StepFactor(HallLayerSpacing,LayerIterator),StepFactor(HallMesaSpacing,MesaIterator)])
         ReferencePoint  = PosSum(DeviceCenter,[-TotalLength/2,HallWMesaList[MesaIterator]/2])
         HallLEnd        = (HallLMesa-2*HallArmSpacing-HallWContact)/2
         
         StepList        = [[0,0]]
-        for SideIterator in range(0,2,1):   # Bottom and top are symmetric, just (-1)**SideIterator times all steps
+        for SideIterator in range(0,2):   # Bottom and top are symmetric, just (-1)**SideIterator times all steps
             StartOfTrace= StepsToPosition(ReferencePoint,StepList)
             PadPosition1= PosSum(DeviceCenter,PadPositions[4*SideIterator][0])
             PadPosition2= PosSum(DeviceCenter,PadPositions[4*SideIterator][1])
             EndOfTrace  = [StartOfTrace[0],StartOfTrace[1]-(-1)**SideIterator*HallWMesaList[MesaIterator]]
-            HallArmContactList[MesaIterator][LayerIterator][4*SideIterator]=[StartOfTrace,EndOfTrace]
+            ArmContactList[MesaIterator][len(LContactList)+LayerIterator][4*SideIterator]=[StartOfTrace,EndOfTrace]
             StepList    += PathToPadFirstFractionSteps(StartOfTrace,PadPosition1,PadPosition2,EndOfTrace,Litho1Fraction)
             StepList    += [[(-1)**SideIterator*HallLEnd,0]]                
-            for ArmIterator in range(0,3,1):
+            for ArmIterator in range(0,3):
                 StepList    += [[0,-(-1)**SideIterator*(HallLArm-0.5*(1-ArmIterator)*HallWContact)]]
 
                 # Calculation of e-beam part of trace to the pads
@@ -261,7 +265,7 @@ for MesaIterator in range(0,len(HallWMesaList),1):
                 PadPosition1= PosSum(DeviceCenter,PadPositions[4*SideIterator+ArmIterator+1][0])
                 PadPosition2= PosSum(DeviceCenter,PadPositions[4*SideIterator+ArmIterator+1][1])
                 EndOfTrace  = [StartOfTrace[0]+(-1)**SideIterator*HallWContact,StartOfTrace[1]-(-1)**SideIterator*(1-ArmIterator)*HallWContact]
-                HallArmContactList[MesaIterator][LayerIterator][4*SideIterator+ArmIterator+1]=[StartOfTrace,EndOfTrace]
+                ArmContactList[MesaIterator][len(LContactList)+LayerIterator][4*SideIterator+ArmIterator+1]=[StartOfTrace,EndOfTrace]
                 StepList    += PathToPadFirstFractionSteps(StartOfTrace,PadPosition1,PadPosition2,EndOfTrace,Litho1Fraction)
                 StepList    += [[0,(-1)**SideIterator*(HallLArm+0.5*(1-ArmIterator)*HallWContact)],[(-1)**SideIterator*(ArmIterator<2)*(HallArmSpacing-HallWContact),0]]
             StepList        += [[(-1)**SideIterator*HallLEnd,0]]
@@ -275,7 +279,7 @@ File.close()
 print('File:\n    '+PolygonFileName+'\n')
 print("Total number of points:\n    %d" % PointCounter)
 
-#%% Mask 1: Si/Ge/Al, etch down Al and Ge. CONTACT PADS
+#%% Mask 1: Si/Ge/Al, etch down Al and Ge. ALIGNMENT AND CONTACT PADS
 PolygonFileName = 'Polygon_%d%02d%02d_%02dh%02d_%s_Mask1_ALIGNMENT_AND_CONTACT_PADS.txt' % (now.year, now.month, now.day, now.hour, now.minute, DeviceType)
 File            = open(PolygonFileName,"w+")
 PointCounter    = 0
@@ -295,12 +299,11 @@ for GroupPoint in ChipMarkGroupPoints:
             StepList        += MoveTo([0,0],StepList,[0,0])
 WriteStepsToFile([0,0],StepList)
 
-# TLM structures
-for MesaIterator in range(0,len(WMesaList),1):
-    for ContactIterator in range(0,len(LContactList),1):
-        TotalLength     = 2*LEnd+8*LContactList[ContactIterator]+sum(LChannelList)
-        DeviceCenter    = PosListSum([TLMBottomLeft,StepFactor(ContactSpacing,ContactIterator),StepFactor(MesaSpacing,MesaIterator)])
-        ReferencePoint  = PosSum(DeviceCenter,[-TotalLength/2,WMesaList[MesaIterator]/2])
+# Contact pads
+for VIterator in range(0,VerticalCells):
+    for HIterator in range(0,HorizontalCells):
+        DeviceCenter    = PosListSum([TLMTopLeft,StepFactor(ContactSpacing,HIterator),StepFactor(MesaSpacing,VIterator)])
+        ReferencePoint  = DeviceCenter
         StepList        = []
 
         # Contact pads
@@ -312,9 +315,9 @@ for MesaIterator in range(0,len(WMesaList),1):
                             PosSum(PosSum(DeviceCenter,PadCenter),[PadWidth/2,-PadWidth/2]),
                             PosSum(PosSum(DeviceCenter,PadCenter),[PadWidth/2,PadWidth/2]),
                             ReferencePoint])
-        for PadIterator in range(0,len(LChannelList)+1,1):
-            StartOfTrace= ArmContactList[MesaIterator][ContactIterator][PadIterator][0]
-            EndOfTrace  = ArmContactList[MesaIterator][ContactIterator][PadIterator][1]
+        for PadIterator in range(0,8):
+            StartOfTrace= ArmContactList[VIterator][HIterator][PadIterator][0]
+            EndOfTrace  = ArmContactList[VIterator][HIterator][PadIterator][1]
             PadPoint1   = PosSum(DeviceCenter,PadPositions[PadIterator][0])
             PadPoint2   = PosSum(DeviceCenter,PadPositions[PadIterator][1])
             
@@ -336,9 +339,9 @@ PolygonFileName = 'Polygon_%d%02d%02d_%02dh%02d_%s_Mask3.txt' % (now.year, now.m
 File            = open(PolygonFileName,"w+")
 PointCounter    = 0
 for MesaIterator in range(0,len(WMesaList),1):
-    for ContactIterator in range(0,len(LContactList),1):
+    for ContactIterator in range(0,len(LContactList)):
         TotalLength     = 2*LEnd+2*Margin+8*LContactList[ContactIterator]+sum(LChannelList)
-        DeviceCenter    = PosListSum([TLMBottomLeft,StepFactor(ContactSpacing,ContactIterator),StepFactor(MesaSpacing,MesaIterator)])
+        DeviceCenter    = PosListSum([TLMTopLeft,StepFactor(ContactSpacing,ContactIterator),StepFactor(MesaSpacing,MesaIterator)])
         ReferencePoint  = PosSum(DeviceCenter,[-TotalLength/2,WMesaList[MesaIterator]/2])
         
         # Edge that sticks out on the left
@@ -349,7 +352,7 @@ for MesaIterator in range(0,len(WMesaList),1):
                             [LEnd+Margin+LContactList[ContactIterator],0]]
 
         # Arms below
-        for ChannelIterator in range(0,len(LChannelList),1):
+        for ChannelIterator in range(0,len(LChannelList)):
             StepList    += [[0,-WMesaList[MesaIterator]-2*Margin],
                             [LChannelList[ChannelIterator],0],
                             [0,WMesaList[MesaIterator]+2*Margin],
