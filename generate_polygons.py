@@ -10,8 +10,6 @@ import numpy as np
 from datetime import datetime, timedelta
 now = datetime.now()
 
-DeviceType      = 'TLM_hall_bar' # 'TLM' = Transmission Line Measurement
-
 #%% Device dimensions
 # Chip dimensions
 ChipWidth               = 6000000
