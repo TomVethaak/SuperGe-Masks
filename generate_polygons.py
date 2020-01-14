@@ -18,7 +18,7 @@ ChipWidth               = 6000000
 ChipLength              = 8000000
 HorizontalCells         = 6
 HorizontalCellSpacing   = 1000000
-VerticalCells           = 4
+VerticalCells           = 8
 VerticalCellSpacing     = -1000000
 
 # Alignment marks
@@ -45,43 +45,59 @@ ChipMarkPoints          = [[-ChipMarkSpacing/2,ChipMarkSpacing/2],  [ChipMarkSpa
                            [-ChipMarkSpacing/2,-ChipMarkSpacing/2], [ChipMarkSpacing/2,-ChipMarkSpacing/2]]
 
 # Contact pads in a 3x3 grid
-PadWidth        = 200000
-Litho1Fraction  = 0.04                          # Hi-res litho step: until what fraction of distance to pads
-Litho2Fraction  = 0.02                          # Lo-res litho step: from what fraction of distance to pads
-PadPositions    = [[[-300000,WArm],[-300000,-WArm]],                            # Left
-                   [[-300000-WArm,-300000+WArm],[-300000+WArm,-300000-WArm]],   # Bottom left
-                   [[-WArm,-300000],[WArm,-300000]],                            # Bottom.. etc
-                   [[300000-WArm,-300000-WArm],[300000+WArm,-300000+WArm]],
-                   [[300000,-WArm],[300000,+WArm]],
-                   [[300000+WArm,300000-WArm],[300000-WArm,300000+WArm]],
-                   [[WArm,300000],[-WArm,300000]],
-                   [[-300000+WArm,300000+WArm],[-300000-WArm,300000-WArm]]]
-ContactPadList  = [[-300000,0],[-300000,-300000],[0,-300000],[300000,-300000],[300000,0],[300000,300000],[0,300000],[-300000,300000]]
+PadSpacing              = 300000
+PadWidth                = 200000
+Litho1Fraction          = 0.04                          # Hi-res litho step: until what fraction of distance to pads
+Litho2Fraction          = 0.02                          # Lo-res litho step: from what fraction of distance to pads
+PadPositions            = [[[-PadSpacing,WArm],[-PadSpacing,-WArm]],                            # Left
+                           [[-PadSpacing-WArm,-PadSpacing+WArm],[-PadSpacing+WArm,-PadSpacing-WArm]],   # Bottom left
+                           [[-WArm,-PadSpacing],[WArm,-PadSpacing]],                            # Bottom.. etc
+                           [[PadSpacing-WArm,-PadSpacing-WArm],[PadSpacing+WArm,-PadSpacing+WArm]],
+                           [[PadSpacing,-WArm],[PadSpacing,+WArm]],
+                           [[PadSpacing+WArm,PadSpacing-WArm],[PadSpacing-WArm,PadSpacing+WArm]],
+                           [[WArm,PadSpacing],[-WArm,PadSpacing]],
+                           [[-PadSpacing+WArm,PadSpacing+WArm],[-PadSpacing-WArm,PadSpacing-WArm]]]
+ContactPadList          = [[-PadSpacing,0],[-PadSpacing,-PadSpacing],[0,-PadSpacing],[PadSpacing,-PadSpacing],[PadSpacing,0],[PadSpacing,PadSpacing],[0,PadSpacing],[-PadSpacing,PadSpacing]]
 
 # TLM dimensions
-TLMTopLeft      = [-2500000,3500000]
-WMesaList       = [1000,2000,5000,10000]        # All lengths in nanometers
-MesaSpacing     = [0,VerticalCellSpacing]       # Spacing between devices when iterating through the WMesaList
-LContactList    = [50,100,200,500]              # 4 contact lengths per chip
-ContactSpacing  = [HorizontalCellSpacing,0]     # Spacing between devices when iterating through the LContactList
-LChannelList    = [50,100,150,200,500,1000,2000]# 8 contacts on one TLM bar, 7 steps
-LEnd            = 1000                          # Length that edges of Si/Ge stick out left and right
-LArm            = 750                           # Vertical length that arms stick out before bending to contacts
-WArm            = 50000                         # Width of arm at the contact
-Margin          = 100                           # Spill of mask 2 around the mesa
+TLMTopLeftCoordinate    = [0,0]
+WMesaList               = [1000,2000,5000,10000]        # All lengths in nanometers
+MesaSpacing             = [0,VerticalCellSpacing]       # Spacing between devices when iterating through the WMesaList
+LContactList            = [50,100,200,500]              # 4 contact lengths per chip
+ContactSpacing          = [HorizontalCellSpacing,0]     # Spacing between devices when iterating through the LContactList
+LChannelList            = [50,100,150,200,500,1000,2000]# 8 contacts on one TLM bar, 7 steps
+LEnd                    = 1000                          # Length that edges of Si/Ge stick out left and right
+LArm                    = 750                           # Vertical length that arms stick out before bending to contacts
+WArm                    = 50000                         # Width of arm at the contact
+TLMMargin               = 100                           # Spill of mask 2 around the mesa
 
 # Hall bars
-HallTopLeft     = [1500000,3500000]
-HallMesaSpacing = MesaSpacing
-HallLayerSpacing= ContactSpacing
-HallArmSpacing  = 50000
-HallLMesa       = 200000
-HallWMesaList   = [5000,10000,20000,50000]
-HallWContact    = 2000
-HallLArm        = 3000
-HallMargin      = 0
+HallTopLeftCoordinate   = [4,0]
+HallMesaSpacing         = MesaSpacing
+HallWMesaList           = [5000,10000,20000,50000]
+HallLayerSpacing        = ContactSpacing
+HallLayerList           = [1,0]
+HallArmSpacing          = 50000
+HallLMesa               = 200000
+HallWContact            = 2000
+HallLArm                = 3000
+HallMargin              = 0
+
+# Greek crosses
+GreekTopLeftCoordinate  = [0,4]
+GreekWidthSpacing       = MesaSpacing
+GreekWidthList          = [2000,5000,10000,20000]
+GreekLengthSpacing      = ContactSpacing
+GreekLengthList         = [20000,20000,20000,20000,20000,50000]
+GreekLayerList          = [1,0]
+GreekMargin             = 0
+
 
 #%% Function definitions
+# Parameter calculations
+def CoordinateToPosition(Coordinate):
+    return [((0.5-HorizontalCells/2.)+Coordinate[0])*HorizontalCellSpacing,((Coordinate[1]-VerticalCells/2.+0.5)*VerticalCellSpacing)]
+
 # Single point operations
 def IntermediatePoint(_PointA,_PointB,_Fraction):
     return PosSum(_PointA,PosDiffFactor(_PointA,_PointB,_Fraction))
@@ -105,6 +121,9 @@ def PosListSum(_PosList):
 def StepFactor(_Step,_Factor):
     return [x*_Factor for x in _Step]
 
+def StepListFactor(_StepList,_Factor):
+    return [[x*_Factor for x in _Step] for _Step in _StepList]
+
 # List operations
 def PositionsToSteps(_PositionList):
     _StepList       = []
@@ -118,12 +137,12 @@ def StepsToPosition(_StartingPoint,_StepList):
 
 # Path macros
 def CrossSteps(_CrossThickness,_CrossWidth):
-    _GCS            = _CrossWidth-_CrossThickness            # Global Cross Step size
+    _CS            = _CrossWidth-_CrossThickness            # Cross Step size
     _StepList       = [[_CrossThickness/2,_CrossThickness/2]]
     for _i in range(0,4,1):
-        _StepList   += [[(_i%2)*((-1)**(1+_i//2))*_GCS,(1-_i%2)*((-1)**(_i//2))*_GCS],
+        _StepList   += [[(_i%2)*((-1)**(1+_i//2))*_CS,(1-_i%2)*((-1)**(_i//2))*_CS],
                         [(1-_i%2)*((-1)**(1+_i//2))*_CrossThickness,(_i%2)*((-1)**(1+_i//2))*_CrossThickness],
-                        [(_i%2)*((-1)**(_i//2))*_GCS,(1-_i%2)*((-1)**(1+_i//2))*_GCS]]
+                        [(_i%2)*((-1)**(_i//2))*_CS,(1-_i%2)*((-1)**(1+_i//2))*_CS]]
     _StepList       += [[-_CrossThickness/2,-_CrossThickness/2]]
     return _StepList
 
@@ -141,7 +160,7 @@ def LongCrossSteps(_CrossThickness,_CrossWidth,_CrossLength):
 def PathToPadFirstFractionSteps(_StartingPoint,_PadPoint1,_PadPoint2,_EndPoint,_Fraction):
     _Point1         = IntermediatePoint(_StartingPoint,_PadPoint1,_Fraction)
     _Point2         = IntermediatePoint(_EndPoint,_PadPoint2,_Fraction)
-    return PositionsToSteps([StartOfTrace,_Point1,_Point2,_EndPoint])
+    return PositionsToSteps([_StartingPoint,_Point1,_Point2,_EndPoint])
 
 def PathToPadSecondFractionSteps(_StartingPoint,_PadPoint1,_PadPoint2,_EndPoint,_Fraction):
     _Point1         = IntermediatePoint(_StartingPoint,_PadPoint1,_Fraction)
@@ -159,7 +178,13 @@ def WriteStepsToFile(_StartingPoint,_StepList):
         PointCounter+=1
     File.write("\n") 
 
-#%% Mask 1: Si/Ge/Al, etch down Al and Ge. DEVICES
+#%% Derived parameters
+TLMTopLeft              = CoordinateToPosition(TLMTopLeftCoordinate)
+GreekTopLeft            = CoordinateToPosition(GreekTopLeftCoordinate)
+HallTopLeft             = CoordinateToPosition(HallTopLeftCoordinate)
+
+
+#%% Mask 2: Si/Ge/Al, etch down Al and Ge. DEVICES
 PolygonFileName = 'Polygon_%d%02d%02d_%02dh%02d_%s_Mask2.txt' % (now.year, now.month, now.day, now.hour, now.minute, DeviceType)
 File            = open(PolygonFileName,"w+")
 PointCounter    = 0
@@ -240,9 +265,8 @@ for MesaIterator in range(0,len(WMesaList)):
         WriteStepsToFile(ReferencePoint,StepList)
 
 # --- Hall bars --- #
-# Empty  list of points to contact the pads to (ends of the arms sticking out bottom and top)
 for MesaIterator in range(0,len(HallWMesaList)):
-    for LayerIterator in range(0,2,1):
+    for LayerIterator in range(0,len(HallLayerList)):
         TotalLength     = HallLMesa
         DeviceCenter    = PosListSum([HallTopLeft,StepFactor(HallLayerSpacing,LayerIterator),StepFactor(HallMesaSpacing,MesaIterator)])
         ReferencePoint  = PosSum(DeviceCenter,[-TotalLength/2,HallWMesaList[MesaIterator]/2])
@@ -258,7 +282,7 @@ for MesaIterator in range(0,len(HallWMesaList)):
             StepList    += PathToPadFirstFractionSteps(StartOfTrace,PadPosition1,PadPosition2,EndOfTrace,Litho1Fraction)
             StepList    += [[(-1)**SideIterator*HallLEnd,0]]                
             for ArmIterator in range(0,3):
-                StepList    += [[0,-(-1)**SideIterator*(HallLArm-0.5*(1-ArmIterator)*HallWContact)]]
+                StepList    += [[0,-(-1)**SideIterator*(HallLArm+0.5*ArmIterator*HallWContact)]]
 
                 # Calculation of e-beam part of trace to the pads
                 StartOfTrace= StepsToPosition(ReferencePoint,StepList)
@@ -267,13 +291,41 @@ for MesaIterator in range(0,len(HallWMesaList)):
                 EndOfTrace  = [StartOfTrace[0]+(-1)**SideIterator*HallWContact,StartOfTrace[1]-(-1)**SideIterator*(1-ArmIterator)*HallWContact]
                 ArmContactList[MesaIterator][len(LContactList)+LayerIterator][4*SideIterator+ArmIterator+1]=[StartOfTrace,EndOfTrace]
                 StepList    += PathToPadFirstFractionSteps(StartOfTrace,PadPosition1,PadPosition2,EndOfTrace,Litho1Fraction)
-                StepList    += [[0,(-1)**SideIterator*(HallLArm+0.5*(1-ArmIterator)*HallWContact)],[(-1)**SideIterator*(ArmIterator<2)*(HallArmSpacing-HallWContact),0]]
+                StepList    += [[0,(-1)**SideIterator*(HallLArm-0.5*(ArmIterator-2)*HallWContact)],[(-1)**SideIterator*(ArmIterator<2)*(HallArmSpacing-HallWContact),0]]
             StepList        += [[(-1)**SideIterator*HallLEnd,0]]
 
         # Go back to the origin
         StepList            += [PosDiff(StepsToPosition(ReferencePoint,StepList),[0,0])]
         # Convert list of steps to list of points and write them to the file
         WriteStepsToFile(ReferencePoint,StepList)
+
+# --- Greek crosses --- #
+for WidthIterator in range(0,len(GreekWidthList)):
+    for LengthIterator in range(0,len(GreekLengthList)):
+        for LayerIterator in range(0,2):
+            TotalLength     = GreekLengthList[LengthIterator]
+            DeviceCenter    = PosListSum([GreekTopLeft,StepFactor(GreekLengthSpacing,LengthIterator),StepFactor(GreekWidthSpacing,WidthIterator),[0,(1-2*LayerIterator)*PadSpacing/3]])
+            ReferencePoint  = DeviceCenter
+            
+            GreekContactNrs = [[6,7,0,5],[4,1,2,3]]
+            Thickness       = GreekWidthList[WidthIterator]
+            CS              = GreekLengthList[LengthIterator]-Thickness/2
+            StepList        = [[Thickness/2,Thickness/2]]
+            for _i in range(0,4,1):
+                StepList    += [[(_i%2)*((-1)**(1+_i//2))*CS,(1-_i%2)*((-1)**(_i//2))*CS]]
+                StartOfTrace= StepsToPosition(ReferencePoint,StepList)
+                PadPosition1= PosListSum([DeviceCenter,[0,(2*LayerIterator-1)*PadSpacing/3],PadPositions[GreekContactNrs[LayerIterator][_i]][0]])
+                PadPosition2= PosListSum([DeviceCenter,[0,(2*LayerIterator-1)*PadSpacing/3],PadPositions[GreekContactNrs[LayerIterator][_i]][1]])
+                EndOfTrace  = [StartOfTrace[0]-(1-_i%2)*(-1)**(_i//2)*Thickness,StartOfTrace[1]-((_i%2)*(-1)**(_i//2)+(LayerIterator==0 and _i==2)-(LayerIterator==1 and _i==0))*Thickness]
+                ArmContactList[GreekTopLeftCoordinate[1]+WidthIterator][GreekTopLeftCoordinate[0]+LengthIterator][GreekContactNrs[LayerIterator][_i]]=[StartOfTrace,EndOfTrace]
+                StepList    += PathToPadFirstFractionSteps(StartOfTrace,PadPosition1,PadPosition2,EndOfTrace,Litho1Fraction)
+                StepList    += [[0,((LayerIterator==0 and _i==2)-(LayerIterator==1 and _i==0))*Thickness],[(_i%2)*((-1)**(_i//2))*CS,(1-_i%2)*((-1)**(1+_i//2))*CS]]
+            StepList        += [[-Thickness/2,-Thickness/2]]
+
+            # Go back to the origin
+            StepList            += [PosDiff(StepsToPosition(ReferencePoint,StepList),[0,0])]
+            # Convert list of steps to list of points and write them to the file
+            WriteStepsToFile(ReferencePoint,StepList)
 
 File.close()
 print('File:\n    '+PolygonFileName+'\n')
@@ -334,43 +386,80 @@ File.close()
 print('File:\n    '+PolygonFileName+'\n')
 print("Total number of points:\n    %d" % PointCounter)
 
-#%% Mask 2: Si/Ge/Al, etch down only Al.
+#%% Mask 3: Si/Ge/Al, etch down only Al.
 PolygonFileName = 'Polygon_%d%02d%02d_%02dh%02d_%s_Mask3.txt' % (now.year, now.month, now.day, now.hour, now.minute, DeviceType)
 File            = open(PolygonFileName,"w+")
 PointCounter    = 0
-for MesaIterator in range(0,len(WMesaList),1):
+
+# TLM
+for MesaIterator in range(0,len(WMesaList)):
     for ContactIterator in range(0,len(LContactList)):
-        TotalLength     = 2*LEnd+2*Margin+8*LContactList[ContactIterator]+sum(LChannelList)
+        TotalLength     = 2*LEnd+2*TLMMargin+8*LContactList[ContactIterator]+sum(LChannelList)
         DeviceCenter    = PosListSum([TLMTopLeft,StepFactor(ContactSpacing,ContactIterator),StepFactor(MesaSpacing,MesaIterator)])
-        ReferencePoint  = PosSum(DeviceCenter,[-TotalLength/2,WMesaList[MesaIterator]/2])
+        ReferencePoint  = PosSum(DeviceCenter,[-TotalLength/2,WMesaList[MesaIterator]/2+TLMMargin])
         
         # Edge that sticks out on the left
-        StepList        = [[0,-WMesaList[MesaIterator]-2*Margin],
-                            [LEnd+Margin,0],
-                            [0,WMesaList[MesaIterator]+2*Margin],
-                            [-LEnd-Margin,0],
-                            [LEnd+Margin+LContactList[ContactIterator],0]]
+        StepList        = [[0,-WMesaList[MesaIterator]-2*TLMMargin],
+                            [LEnd+TLMMargin,0],
+                            [0,WMesaList[MesaIterator]+2*TLMMargin],
+                            [-LEnd-TLMMargin,0],
+                            [LEnd+TLMMargin+LContactList[ContactIterator],0]]
 
         # Arms below
         for ChannelIterator in range(0,len(LChannelList)):
-            StepList    += [[0,-WMesaList[MesaIterator]-2*Margin],
+            StepList    += [[0,-WMesaList[MesaIterator]-2*TLMMargin],
                             [LChannelList[ChannelIterator],0],
-                            [0,WMesaList[MesaIterator]+2*Margin],
+                            [0,WMesaList[MesaIterator]+2*TLMMargin],
                             [-LChannelList[ChannelIterator],0],
                             [LChannelList[ChannelIterator]+LContactList[ContactIterator],0]]
 
         # Edge that sticks out on the right
-        StepList        += [[0,-WMesaList[MesaIterator]-2*Margin],
-                            [LEnd+Margin,0],
-                            [0,WMesaList[MesaIterator]+2*Margin],
-                            [-LEnd-Margin,0],
-                            [LEnd+Margin-TotalLength,0]]
+        StepList        += [[0,-WMesaList[MesaIterator]-2*TLMMargin],
+                            [LEnd+TLMMargin,0],
+                            [0,WMesaList[MesaIterator]+2*TLMMargin],
+                            [-LEnd-TLMMargin,0],
+                            [LEnd+TLMMargin-TotalLength,0]]
 
         # Go back to the origin
         StepList        += [PosDiff(StepsToPosition(ReferencePoint,StepList),[0,0])]
         # Convert list of steps to list of points and write them to the file
         WriteStepsToFile(ReferencePoint,StepList)
+
+# Hall bars
+for MesaIterator in range(0,len(HallWMesaList)):
+    for LayerIterator in range(0,len(HallLayerList)):
+        if HallLayerList[LayerIterator]:
+            TotalLength     = HallLMesa+2*HallMargin
+            DeviceCenter    = PosListSum([HallTopLeft,StepFactor(HallLayerSpacing,LayerIterator),StepFactor(HallMesaSpacing,MesaIterator)])
+            ReferencePoint  = PosSum(DeviceCenter,[-TotalLength/2,HallWMesaList[MesaIterator]/2+HallLArm])
+            StepList        = []
+            for x in [0,1]:
+                StepList    += StepListFactor([[0,-HallWMesaList[MesaIterator]-2*HallMargin-2*HallLArm],[TotalLength,0]],
+                                (-1)**x)
+    
+            # Go back to the origin
+            StepList        += [PosDiff(StepsToPosition(ReferencePoint,StepList),[0,0])]
+            # Convert list of steps to list of points and write them to the file
+            WriteStepsToFile(ReferencePoint,StepList)
+
+# Greek crosses
+for WidthIterator in range(0,len(GreekWidthList)):
+    for LengthIterator in range(0,len(GreekLengthList)):
+        for LayerIterator in range(0,2):
+            if GreekLayerList[LayerIterator]:
+                TotalLength     = 2*GreekLengthList[LengthIterator]+2*GreekMargin
+                DeviceCenter    = PosListSum([GreekTopLeft,StepFactor(GreekLengthSpacing,LengthIterator),StepFactor(GreekWidthSpacing,WidthIterator),[0,(1-2*LayerIterator)*PadSpacing/3]])
+                ReferencePoint  = PosSum(DeviceCenter,[-TotalLength/2,TotalLength/2])
+                StepList        = []
+                for x in [0,1]:
+                    StepList    += StepListFactor([[0,-TotalLength],[TotalLength,0]],
+                                    (-1)**x)
         
+                # Go back to the origin
+                StepList        += [PosDiff(StepsToPosition(ReferencePoint,StepList),[0,0])]
+                # Convert list of steps to list of points and write them to the file
+                WriteStepsToFile(ReferencePoint,StepList)  
+  
 File.close()
 print('File:\n    '+PolygonFileName+'\n')
 print("Total number of points:\n    %d" % PointCounter)
