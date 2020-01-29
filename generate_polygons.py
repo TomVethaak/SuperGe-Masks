@@ -10,6 +10,7 @@ import numpy as np
 from datetime import datetime, timedelta
 now = datetime.now()
 
+DeviceType              = "All"
 #%% Device dimensions
 # Chip dimensions
 ChipWidth               = 6000000
@@ -44,7 +45,8 @@ ChipMarkPoints          = [[-ChipMarkSpacing/2.,ChipMarkSpacing/2.],  [ChipMarkS
 
 # Contact pads in a 3x3 grid
 PadSpacing              = 300000
-PadWidth                = 200000
+PadWidth                = 150000
+WArm                    = 50000                         # Width of arm at the contact
 Litho1Fraction          = 0.04                          # Hi-res litho step: until what fraction of distance to pads
 Litho2Fraction          = 0.02                          # Lo-res litho step: from what fraction of distance to pads
 PadPositions            = [[[-PadSpacing,WArm],[-PadSpacing,-WArm]],                            # Left
@@ -66,7 +68,6 @@ ContactSpacing          = [HorizontalCellSpacing,0]     # Spacing between device
 LChannelList            = [50,100,150,200,500,1000,2000]# 8 contacts on one TLM bar, 7 steps
 LEnd                    = 1000                          # Length that edges of Si/Ge stick out left and right
 LArm                    = 750                           # Vertical length that arms stick out before bending to contacts
-WArm                    = 50000                         # Width of arm at the contact
 TLMMargin               = 100                           # Spill of mask 2 around the mesa
 
 # Hall bars
@@ -104,6 +105,10 @@ MeanderTurnRadius       = 25000
 MeanderNDoubleTurns     = 2
 MeanderNTurnPoints      = 64
 
+# Parameter calculations
+def CoordinateToPosition(Coordinate):
+    return [((0.5-HorizontalCells/2.)+Coordinate[0])*HorizontalCellSpacing,((Coordinate[1]-VerticalCells/2.+0.5)*VerticalCellSpacing)]
+
 # Empty  list of points to contact the pads to (ends of the arms sticking out bottom and top)
 ArmContactList  = [[[[CoordinateToPosition([HIterator,VIterator]),
                       CoordinateToPosition([HIterator,VIterator])] 
@@ -111,9 +116,6 @@ ArmContactList  = [[[[CoordinateToPosition([HIterator,VIterator]),
                       for VIterator in range(0,VerticalCells)]
 
 #%% Function definitions
-# Parameter calculations
-def CoordinateToPosition(Coordinate):
-    return [((0.5-HorizontalCells/2.)+Coordinate[0])*HorizontalCellSpacing,((Coordinate[1]-VerticalCells/2.+0.5)*VerticalCellSpacing)]
 
 # Single point operations
 def IntermediatePoint(_PointA,_PointB,_Fraction):
