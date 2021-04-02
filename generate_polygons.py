@@ -181,20 +181,20 @@ def LongCrossSteps(_CrossThickness,_CrossWidth,_CrossLength):
 def PathToPadFirstFraction(_PadNr,_StartingPoint,_EndPoint):
     global HorizontalIterator, VerticalIterator, ArmContactList
     _DeviceCenter   = CoordinateToPosition([HorizontalIterator,VerticalIterator])
-    _PadPoint1      = PosSum(_DeviceCenter,PadPositions[_PadNr][0])
-    _PadPoint2      = PosSum(_DeviceCenter,PadPositions[_PadNr][1])
+    _PadPoint1      = PosSum(_DeviceCenter,PadPositions[int(_PadNr)][0])
+    _PadPoint2      = PosSum(_DeviceCenter,PadPositions[int(_PadNr)][1])
     _Point1         = IntermediatePoint(_StartingPoint,_PadPoint1,Litho1Fraction)
     _Point2         = IntermediatePoint(_EndPoint,_PadPoint2,Litho1Fraction)
-    ArmContactList[VerticalIterator][HorizontalIterator][_PadNr]=[_StartingPoint,_EndPoint]
+    ArmContactList[VerticalIterator][HorizontalIterator][int(_PadNr)]=[_StartingPoint,_EndPoint]
     return PositionsToSteps([_StartingPoint,_Point1,_Point2,_EndPoint]) 
 
 def PathToPadSecondFraction(_PadNr):
     global HorizontalIterator, VerticalIterator, ArmContactList
-    _StartingPoint  = ArmContactList[VerticalIterator][HorizontalIterator][_PadNr][0]
-    _EndPoint       = ArmContactList[VerticalIterator][HorizontalIterator][_PadNr][1]
+    _StartingPoint  = ArmContactList[VerticalIterator][HorizontalIterator][int(_PadNr)][0]
+    _EndPoint       = ArmContactList[VerticalIterator][HorizontalIterator][int(_PadNr)][1]
     _DeviceCenter   = CoordinateToPosition([HorizontalIterator,VerticalIterator])
-    _PadPoint1      = PosSum(_DeviceCenter,PadPositions[_PadNr][0])
-    _PadPoint2      = PosSum(_DeviceCenter,PadPositions[_PadNr][1])
+    _PadPoint1      = PosSum(_DeviceCenter,PadPositions[int(_PadNr)][0])
+    _PadPoint2      = PosSum(_DeviceCenter,PadPositions[int(_PadNr)][1])
     _Point1         = IntermediatePoint(_StartingPoint,_PadPoint1,Litho2Fraction)
     _Point2         = IntermediatePoint(_EndPoint,_PadPoint2,Litho2Fraction)
     return PositionsToSteps([_DeviceCenter,_StartingPoint,_Point1,_PadPoint1,_PadPoint2,_Point2,_Point1,_StartingPoint,_DeviceCenter])
@@ -378,8 +378,8 @@ def DrawMeanders():
                             TurnPoints  += [PosSum(TurnCenter,
                                                   [(-1)**(Side+Turn)*cos(Angle)*Radius,sin(Angle)*Radius])]
                         if 1-Turn:
-                            StepList    += PositionsToSteps(TurnPoints[0:len(TurnPoints)/2]
-                                            + [PosSum(TurnPoints[len(TurnPoints)/2],
+                            StepList    += PositionsToSteps(TurnPoints[0:int(len(TurnPoints)/2)]
+                                            + [PosSum(TurnPoints[int(len(TurnPoints)/2)],
                                                 [0,(-1)**Side*MeanderContactWidth/2])])
                             StepList    += [[-(-1)**Side*MeanderContactLength,0]]
                             StartOfTrace= StepsToPosition(ReferencePoint,StepList)
@@ -387,9 +387,9 @@ def DrawMeanders():
                             PadNr       = (Side==0 and IDoubleTurn==0)*7+(Side==1 and IDoubleTurn==1)*4+(Side==1 and IDoubleTurn==0)*3
                             StepList    += PathToPadFirstFraction(PadNr,StartOfTrace,EndOfTrace)
                             StepList    +=[[(-1)**Side*((0.5-0.5*IDoubleTurn)*MeanderContactWidth+MeanderContactLength),0]]
-                            StepList    += PositionsToSteps([PosSum(TurnPoints[len(TurnPoints)/2],
+                            StepList    += PositionsToSteps([PosSum(TurnPoints[int(len(TurnPoints)/2)],
                                                 [0,-(-1)**Side*MeanderContactWidth/2])]
-                                            + TurnPoints[len(TurnPoints)/2+1:len(TurnPoints)+1])
+                                            + TurnPoints[int(len(TurnPoints)/2)+1:len(TurnPoints)+1])
                         else:
                             StepList    += PositionsToSteps(TurnPoints)
                         StepList        += [[(-1)**(Turn+Side)*Length,0]]
