@@ -13,12 +13,13 @@ now = datetime.now()
 DeviceType              = "All"
 #%% Device dimensions
 # Chip dimensions
-ChipWidth               = 6000000
-ChipLength              = 8000000
+
 HorizontalCells         = 6
 HorizontalCellSpacing   = 1000000
 VerticalCells           = 8
 VerticalCellSpacing     = -1000000
+ChipWidth               = HorizontalCells*1000000
+ChipLength              = VerticalCells*1000000
 
 # Alignment marks
 GlobalCrossThickness    = 10000
